@@ -9,7 +9,7 @@ if "sigma_value" not in st.session_state:
 # --- ページ設定 ---
 st.set_page_config(page_title="慶應ボード決め", page_icon="🏄‍♂️")
 
-st.title("🏄‍慶應ボード決め")
+st.title("慶應ボード決め")
 st.markdown("""
 名前と回数を入れて実行可能
 """)
@@ -96,7 +96,7 @@ luck_sigma = st.sidebar.slider(
 # 逆転可能ラインの計算（σの2倍）
 reversal_range = luck_sigma * 2.0
 
-st.sidebar.warning(f"""**現在の設定：**練習回数の差が**{reversal_range: .1f}回**いないなら運で逆転可能""")
+st.sidebar.warning(f"""**現在の設定：**練習回数の差が**{reversal_range: .1f}回**以内なら運で逆転可能""")
 
 # --- 抽選ボタンと結果表示 ---
 if st.button("抽選", type="primary"):
