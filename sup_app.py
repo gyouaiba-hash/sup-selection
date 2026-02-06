@@ -2,6 +2,10 @@ import streamlit as st
 import pandas as pd
 import random
 
+# スライダーの値を記憶するための「箱」を作る
+if "sigma_value" not in st.session_state:
+    st.session_state.sigma_value = 2.0
+
 # --- ページ設定 ---
 st.set_page_config(page_title="慶應ボード決め", page_icon="🏄‍♂️")
 
@@ -12,20 +16,54 @@ st.markdown("""
 st.markdown("""1.実力を反映：練習回数をベーススコアとする""")
 st.markdown("""2.正規分布による揺らぎ：練習回数に平均0の「ガウス分布」に従う運要素を加える""")
 
+# --- 統計量の計算（サイドバーより前に計算しておく） ---
+if not edited_df.empty:
+    current_mean = edited_df["練習回数"].mean()
+    current_sd = edited_df["練習回数"].std()
+    
+    # データが少なくて計算できない場合の処理
+    if pd.isna(current_sd):
+        current_sd = 0.0
+    
+    # 理想のσ（標準偏差 × 0.5）
+    ideal_sigma = max(0.5, current_sd * 0.5)
+else:
+    current_mean = 0.0
+    current_sd = 0.0
+    ideal_sigma = 2.0
+
 # --- サイドバー：設定 ---
 st.sidebar.header("設定")
 
-# 運要素（シグマ）の調整
-luck_sigma = st.sidebar.slider(
-    "運の強さ (標準偏差 σ)",
-    min_value=0.0,
-    max_value=20.0,
-    value=5.0,
-    step=0.500,
-    help="値を大きくすると、練習回数が少ない人でも逆転しやすくなります。"
-)
+# 1. 統計情報の表示（ここに追加しました！）
+st.sidebar.markdown("### 📊 データ統計")
+st.sidebar.info(f"""
+- **平均**: {current_mean:.1f} 回
+- **標準偏差**: {current_sd:.1f}
+""")
+st.sidebar.caption("※標準偏差が大きい＝格差が激しい")
 
-st.sidebar.info(f"現在の設定: 練習回数の差が **{luck_sigma * 2:.1f}回** 以内なら、運で逆転可能です。")
+st.sidebar.markdown("---")
+
+# 2. ボタンとスライダーの設定
+st.sidebar.markdown("### ⚙️ 運要素(σ)の調整")
+st.sidebar.caption(f"理想値 (SD×0.5): **{ideal_sigma:.1f}**")
+
+# ボタンを押したら理想値をセット
+if st.sidebar.button("理想のσの値を設定する"):
+    st.session_state.sigma_value = float(ideal_sigma)
+    st.rerun() # 画面を更新してスライダーに反映
+
+# スライダー（key="sigma_value" でボタンと連動させます）
+luck_sigma = st.sidebar.slider(
+    "運の強さ (σ)",
+    min_value=0.0,
+    max_value=10.0,
+    value=st.session_state.sigma_value, # 記憶している値を使う
+    step=0.1,
+    key="sigma_value", 
+    help="値を大きくすると、下剋上が起きやすくなります。"
+)
 
 # --- メインエリア：データ入力 ---
 st.subheader("メンバーと練習回数の入力")
