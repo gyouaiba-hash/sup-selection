@@ -26,7 +26,7 @@ luck_sigma = st.sidebar.slider(
 st.sidebar.info(f"現在の設定: 練習回数の差が **{luck_sigma * 2:.1f}回** 以内なら、運で逆転可能です。")
 
 # --- メインエリア：データ入力 ---
-st.subheader("1. メンバーと練習回数の入力")
+st.subheader("メンバーと練習回数の入力")
 st.caption("下の表は直接編集できます。行を追加・削除して人数を調整してください。")
 
 # 初期の空データ（または例）
