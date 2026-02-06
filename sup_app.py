@@ -75,8 +75,8 @@ if st.button("抽選", type="primary"):
             
             results.append({
                 "名前": name,
-                "練習回数(実力)": practice,
-                "運ボーナス": luck_score,
+                "練習回数": practice,
+                "運": luck_score,
                 "最終スコア": final_score
             })
         
