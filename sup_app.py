@@ -18,7 +18,7 @@ st.markdown("""2. 正規分布による揺らぎ：練習回数に平均0の「�
 
 # --- データ入力エリア ---
 st.subheader("メンバーと練習回数の入力")
-st.caption("下の表は直接編集可能)           
+st.caption("下の表は直接編集可能")           
 
 # 初期の空データ（または例）
 default_data = pd.DataFrame(
