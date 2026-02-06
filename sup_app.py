@@ -9,7 +9,7 @@ if "sigma_value" not in st.session_state:
 # --- ページ設定 ---
 st.set_page_config(page_title="慶應ボード決め", page_icon="🏄‍♂️")
 
-st.title("慶應ボード決め")
+st.title("慶應ボードセレクション")
 st.markdown("""
 名前と回数を入れて実行可能
 """)
@@ -18,7 +18,7 @@ st.markdown("""2. 正規分布による揺らぎ：練習回数に平均0の「�
 
 # --- データ入力エリア ---
 st.subheader("メンバーと練習回数の入力")
-st.caption("下の表は直接編集可能")           
+st.caption("下の表は直接編集可能です")           
 
 # 初期の空データ（または例）
 default_data = pd.DataFrame(
