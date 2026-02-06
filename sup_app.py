@@ -88,7 +88,6 @@ luck_sigma = st.sidebar.slider(
     "運の強さ (σ)",
     min_value=0.0,
     max_value=10.0,
-    value=st.session_state.sigma_value, # 記憶している値を使う
     step=0.1,
     key="sigma_value", 
     help="値を大きくすると、下剋上が起きやすくなります。"
