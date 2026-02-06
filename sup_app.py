@@ -93,7 +93,7 @@ if st.button("抽選", type="primary"):
         
         # 表示用に桁数を整える
         display_df = result_df.copy()
-        display_df["運ボーナス"] = display_df["運ボーナス"].map('{:+.1f}'.format)
+        display_df["運"] = display_df["運"].map('{:+.1f}'.format)
         display_df["最終スコア"] = display_df["最終スコア"].map('{:.1f}'.format)
         
         st.table(display_df)
