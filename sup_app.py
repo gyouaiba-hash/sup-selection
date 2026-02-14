@@ -53,7 +53,7 @@ else:
 
 # --- 4. データ表示・編集 (Data editor) ---
 st.subheader(f"メンバーと練習回数の確認（{selection_type}）")
-st.caption("チェックを外すと、統計と抽選から除外されます。")
+st.caption("チェックを外すと、統計と抽選から除外される")
 
 # チェックボックス形式のテーブル
 edited_df = st.data_editor(
@@ -130,7 +130,7 @@ if st.button("抽選実行", type="primary"):
             results.append({
                 "名前": row["名前"],
                 "練習回数": row["練習回数"],
-                "運 (Luck)": luck,
+                "運": luck,
                 "最終スコア": row["練習回数"] + luck
             })
         
@@ -140,6 +140,6 @@ if st.button("抽選実行", type="primary"):
         
         st.success(f"{selection_type}（対象：{len(active_df)}名）の抽選結果")
         display_res = result_df.copy()
-        display_res["運 (Luck)"] = display_res["運 (Luck)"].map('{:+.1f}'.format)
+        display_res["運"] = display_res["運"].map('{:+.1f}'.format)
         display_res["最終スコア"] = display_res["最終スコア"].map('{:.1f}'.format)
         st.table(display_res)
