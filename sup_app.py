@@ -4,7 +4,7 @@ import random
 
 # --- 1. スプレッドシートの設定 ---
 # 「1ヶ月間の回数」シートを表示した状態のURLをコピーし、末尾を /export?format=csv&gid=... に書き換えてね
-SHEET_URL = "https://docs.google.com/spreadsheets/d/1LLgMdsiORF8LBCtN_8BHGUdms_TpbXuwki4DFn03Amo/export?format=csv&gid=sharing"
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1LLgMdsiORF8LBCtN_8BHGUdms_TpbXuwki4DFn03Amo/export?format=csv&gid=0"
 
 # スライダーの値を記憶するための「箱」を作る
 if "sigma_value" not in st.session_state:
