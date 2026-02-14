@@ -2,6 +2,10 @@ import streamlit as st
 import pandas as pd
 import random
 
+# --- 1. スプレッドシートの設定 ---
+# 「1ヶ月間の回数」シートを表示した状態のURLをコピーし、末尾を /export?format=csv&gid=... に書き換えてね
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1D8LvFnTY90S0QxuAHdSmipur4lcv-C9lIJ0UKdBYucs/export?format=csv&gid=2078465993"
+
 # スライダーの値を記憶するための「箱」を作る
 if "sigma_value" not in st.session_state:
     st.session_state.sigma_value = 2.0
@@ -9,133 +13,101 @@ if "sigma_value" not in st.session_state:
 # --- ページ設定 ---
 st.set_page_config(page_title="慶應ボード決め", page_icon="🏄‍♂️")
 
-st.title("慶應ボードセレクション")
-st.markdown("""
-名前と回数を入れて実行可能
-""")
-st.markdown("""1. 実力を反映：練習回数をベーススコアとする""")
-st.markdown("""2. 正規分布による揺らぎ：練習回数に平均0の「ガウス分布」に従う運要素を加える""")
+st.title("🏄‍慶應ボードセレクション")
+st.markdown("スプレッドシートから練習回数を自動取得します。")
+st.markdown("1. 実力を反映：練習回数をベーススコアとする")
+st.markdown("2. 正規分布による揺らぎ：練習回数に平均0の「ガウス分布」に従う運要素を加える")
 
-# --- データ入力エリア ---
-st.subheader("メンバーと練習回数の入力")
-st.caption("下の表は直接編集可能です")           
+# --- 2. データ読み込み処理 ---
+@st.cache_data(ttl=30) # 30秒キャッシュ（頻繁にシートを更新する場合に便利）
+def load_spreadsheet_data():
+    if "google.com" not in SHEET_URL or "【" in SHEET_URL:
+        # URLがデフォルトのままならダミーデータを表示
+        return pd.DataFrame([{"名前": "メンバーA", "練習回数": 10}, {"名前": "メンバーB", "練習回数": 8}])
+    
+    try:
+        # 1-3行目をスキップして4行目のヘッダーから読み込む
+        df = pd.read_csv(SHEET_URL, skiprows=3)
+        
+        if "名前" in df.columns and "練習回数" in df.columns:
+            # 名前が空の行を除去し、練習回数を数値に変換
+            df = df.dropna(subset=["名前"])
+            df["練習回数"] = pd.to_numeric(df["練習回数"], errors='coerce').fillna(0).astype(int)
+            return df[["名前", "練習回数"]].reset_index(drop=True)
+        else:
+            st.error("シート内に「名前」と「練習回数」の列が見つかりません。")
+            return pd.DataFrame()
+    except Exception as e:
+        st.error(f"データの読み込みに失敗しました。URLを確認してください。")
+        return pd.DataFrame()
 
-# 初期の空データ（または例）
-default_data = pd.DataFrame(
-    [
-        {"名前": "メンバーA", "練習回数": 50},
-        {"名前": "メンバーB", "練習回数": 45},
-        {"名前": "メンバーC", "練習回数": 30},
-        {"名前": "メンバーD", "練習回数": 10},
-    ]
-)
+# --- データ表示・編集エリア ---
+st.subheader("メンバーと練習回数の確認")
+st.caption("スプレッドシート「1ヶ月間の回数」から自動取得中。")
 
-# 編集可能なデータフレームを表示
+default_data = load_spreadsheet_data()
+
 edited_df = st.data_editor(
     default_data,
     num_rows="dynamic",
     column_config={
         "練習回数": st.column_config.NumberColumn(
-            "練習回数",
-            min_value=0,
-            step=1,
-            format="%d 回"
+            "練習回数", min_value=0, step=1, format="%d 回"
         )
     },
     use_container_width=True
 )
 
-# --- 統計量の計算（表を作った後に計算する） ---
+# --- 統計量の計算 ---
 if not edited_df.empty:
     current_mean = edited_df["練習回数"].mean()
     current_sd = edited_df["練習回数"].std()
-    
-    # データが少なくて計算できない場合の処理
-    if pd.isna(current_sd):
-        current_sd = 0.0
-    
-    # 理想のσ（標準偏差 × 0.5）
+    current_sd = 0.0 if pd.isna(current_sd) else current_sd
     ideal_sigma = max(0.5, current_sd * 0.5)
 else:
-    current_mean = 0.0
-    current_sd = 0.0
-    ideal_sigma = 2.0
+    current_mean, current_sd, ideal_sigma = 0.0, 0.0, 2.0
 
-# --- サイドバー：設定（計算が終わってから表示する） ---
+# --- サイドバー：設定 ---
 st.sidebar.header("設定")
-
-# 1. 統計情報の表示
 st.sidebar.markdown("### データ統計")
-st.sidebar.info(f"""
-- **平均**: {current_mean:.1f} 回
-- **標準偏差**: {current_sd:.1f}
-""")
-st.sidebar.caption("※標準偏差が大きい＝格差が激しい")
+st.sidebar.info(f"- **平均**: {current_mean:.1f} 回\n- **標準偏差**: {current_sd:.1f}")
 
 st.sidebar.markdown("---")
-
-# 2. ボタンとスライダーの設定
 st.sidebar.markdown("### 運要素(σ)の調整")
 st.sidebar.caption(f"理想値 (SD×0.5): **{ideal_sigma:.1f}**")
 
-# ボタンを押したら理想値をセット
 if st.sidebar.button("理想のσの値を設定する"):
     st.session_state.sigma_value = float(ideal_sigma)
-    st.rerun() # 画面を更新してスライダーに反映
+    st.rerun()
 
-# スライダー
 luck_sigma = st.sidebar.slider(
-    "運の強さ (σ)",
-    min_value=0.0,
-    max_value=10.0,
-    step=0.1,
-    key="sigma_value", 
-    help="値を大きくすると、下剋上が起きやすくなる"
+    "運の強さ (σ)", min_value=0.0, max_value=10.0, step=0.1, key="sigma_value"
 )
 
-# 逆転可能ラインの計算（σの2倍）
 reversal_range = luck_sigma * 2.0
-
-st.sidebar.warning(f"""**現在の設定：**練習回数の差が**{reversal_range: .1f}回**以内なら運で逆転可能""")
+st.sidebar.warning(f"**現在の設定：** 差が **{reversal_range:.1f}回** 以内なら逆転可能")
 
 # --- 抽選ボタンと結果表示 ---
-if st.button("抽選", type="primary"):
+if st.button("抽選実行", type="primary"):
     if edited_df.empty:
-        st.error("メンバーを入力してください！")
+        st.error("データがありません！")
     else:
-        # 計算ロジック
         results = []
-        
-        # 毎回ランダムな結果を出すためのループ
-        for index, row in edited_df.iterrows():
-            name = row["名前"]
-            practice = row["練習回数"]
-            
-            # ガウシアンノイズ（運）を生成
-            luck_score = random.gauss(0, luck_sigma)
-            final_score = practice + luck_score
-            
+        for _, row in edited_df.iterrows():
+            luck = random.gauss(0, luck_sigma)
             results.append({
-                "名前": name,
-                "練習回数": practice,
-                "運": luck_score,
-                "最終スコア": final_score
+                "名前": row["名前"],
+                "練習回数": row["練習回数"],
+                "運": luck,
+                "最終スコア": row["練習回数"] + luck
             })
         
-        # 結果をデータフレーム化してソート
-        result_df = pd.DataFrame(results)
-        result_df = result_df.sort_values(by="最終スコア", ascending=False).reset_index(drop=True)
-        
-        # 順位カラムを追加（1から開始）
+        result_df = pd.DataFrame(results).sort_values(by="最終スコア", ascending=False).reset_index(drop=True)
         result_df.index = result_df.index + 1
         result_df.index.name = "順位"
         
-        # --- 結果表示 ---
-        st.success("結果は以下の通りです")
-        
-        # 表示用に桁数を整える
+        st.success("結果発表！")
         display_df = result_df.copy()
         display_df["運"] = display_df["運"].map('{:+.1f}'.format)
         display_df["最終スコア"] = display_df["最終スコア"].map('{:.1f}'.format)
-        
         st.table(display_df)
