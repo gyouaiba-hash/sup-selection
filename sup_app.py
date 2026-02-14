@@ -67,11 +67,11 @@ edited_df = st.data_editor(
     use_container_width=True
 )
 
-# 【追加】除外（欠席）されたメンバーをグレーエリアに表示
+# 除外（欠席）されたメンバーをグレーエリアに表示
 excluded_members = filtered_data[~filtered_data["名前"].isin(edited_df["名前"])]
 if not excluded_members.empty:
     st.markdown("---")
-    st.caption("⬇️ 除外・欠席中のメンバー（表から消した人はここから確認できます）")
+    st.caption("⬇️ 除外・欠席中のメンバー")
     # グレーっぽい背景にするための設定
     st.dataframe(
         excluded_members[["名前", "練習回数"]], 
@@ -81,18 +81,26 @@ if not excluded_members.empty:
     st.info("👆 間違えて消した場合は、上の表の空行に「名前」と「回数」を打ち直せば復活します。")
 
 # --- 5. 統計量の計算 (Stats calculation) ---
-if not edited_df.empty:
-    current_mean = edited_df["練習回数"].mean()
-    current_sd = edited_df["練習回数"].std()
+st.sidebar.header("設定")
+
+# 【追加機能】休んでいる人を含むかどうかの選択
+st.sidebar.markdown("### 統計の対象")
+include_excluded = st.sidebar.checkbox("除外・欠席者を含めて計算", value=False)
+
+# 統計に使用するデータの切り替え
+stats_target = filtered_data if include_excluded else edited_df
+target_label = "（欠席者込み）" if include_excluded else "（出席者のみ）"
+
+if not stats_target.empty:
+    current_mean = stats_target["練習回数"].mean()
+    current_sd = stats_target["練習回数"].std()
     current_sd = 0.0 if pd.isna(current_sd) else current_sd
     ideal_sigma = max(0.5, current_sd * 0.5)
 else:
     current_mean, current_sd, ideal_sigma = 0.0, 0.0, 2.0
 
-st.sidebar.header("設定")
-
 # 1. 統計情報の表示
-st.sidebar.markdown("### データ統計")
+st.sidebar.markdown(f"### データ統計 {target_label}")
 st.sidebar.info(f"""
 - **平均**: {current_mean:.1f} 回
 - **標準偏差**: {current_sd:.1f}
@@ -151,3 +159,4 @@ if st.button("抽選実行", type="primary"):
         display_df["運 (Luck)"] = display_df["運 (Luck)"].map('{:+.1f}'.format)
         display_df["最終スコア (Score)"] = display_df["最終スコア (Score)"].map('{:.1f}'.format)
         st.table(display_df)
+
