@@ -16,26 +16,24 @@ st.title("慶應ボード決め")
 @st.cache_data(ttl=30)
 def load_spreadsheet_data():
     if "google.com" not in SHEET_URL or "【" in SHEET_URL:
-        return pd.DataFrame([
+        df = pd.DataFrame([
             {"名前": "メンバーA", "性別": "男子", "練習回数": 10},
             {"名前": "メンバーB", "性別": "女子", "練習回数": 8}
         ])
-    
-    try:
-        df = pd.read_csv(SHEET_URL)
-        
-        # 名前、性別、練習回数の3つの列があるかチェック (Check columns)
-        required_cols = ["名前", "性別", "練習回数"]
-        if all(col in df.columns for col in required_cols):
+    else:
+        try:
+            df = pd.read_csv(SHEET_URL)
             df = df.dropna(subset=["名前"])
             df["練習回数"] = pd.to_numeric(df["練習回数"], errors='coerce').fillna(0).astype(int)
-            return df[required_cols].reset_index(drop=True)
-        else:
-            st.error(f"列が見つからない。現在の列: {list(df.columns)}")
+        except Exception as e:
+            st.error(f"読み込み失敗: {e}")
             return pd.DataFrame()
-    except Exception as e:
-        st.error(f"読み込み失敗: {e}")
-        return pd.DataFrame()
+
+    # 【重要】初期状態で全員「参加」にチェックを入れる列を追加
+    if "名前" in df.columns:
+        df.insert(0, "対象", True)
+        return df.reset_index(drop=True)
+    return pd.DataFrame()
 
 # 全データを読み込む
 all_data = load_spreadsheet_data()
@@ -47,49 +45,48 @@ selection_type = st.radio(
     horizontal=True
 )
 
-# 選択に合わせてデータをフィルタリング (Filtering)
+# 性別フィルター
 if selection_type == "全員":
-    filtered_data = all_data
+    display_data = all_data
 else:
-    # 選択された性別（男子 or 女子）と一致する行だけを抽出
-    filtered_data = all_data[all_data["性別"] == selection_type]
+    display_data = all_data[all_data["性別"] == selection_type]
 
 # --- 4. データ表示・編集 (Data editor) ---
 st.subheader(f"メンバーと練習回数の確認（{selection_type}）")
+st.caption("チェックを外すと、統計と抽選から除外されます。")
+
+# チェックボックス形式のテーブル
 edited_df = st.data_editor(
-    filtered_data,
-    num_rows="dynamic",
+    display_data,
+    num_rows="fixed", # 名前が消えないよう固定
     column_config={
+        "対象": st.column_config.CheckboxColumn(
+            "対象",
+            help="抽選に含める場合はチェック",
+            default=True,
+        ),
         "練習回数": st.column_config.NumberColumn(
             "練習回数", min_value=0, step=1, format="%d 回"
-        )
+        ),
+        "名前": st.column_config.TextColumn("名前", disabled=True), # 名前は編集不可に
+        "性別": st.column_config.TextColumn("性別", disabled=True)
     },
-    use_container_width=True
+    use_container_width=True,
+    hide_index=True
 )
 
-# 除外（欠席）されたメンバーをグレーエリアに表示
-excluded_members = filtered_data[~filtered_data["名前"].isin(edited_df["名前"])]
-if not excluded_members.empty:
-    st.markdown("---")
-    st.caption("⬇️ 除外・欠席中のメンバー")
-    # グレーっぽい背景にするための設定
-    st.dataframe(
-        excluded_members[["名前", "練習回数"]], 
-        hide_index=True, 
-        use_container_width=True
-    )
-    st.info("👆 間違えて消した場合は、上の表の空行に「名前」と「回数」を打ち直せば復活します。")
+# 「対象」にチェックが入っている人のみを抽出
+active_df = edited_df[edited_df["対象"] == True]
 
 # --- 5. 統計量の計算 (Stats calculation) ---
 st.sidebar.header("設定")
 
-# 【追加機能】休んでいる人を含むかどうかの選択
+# 統計対象の選択
 st.sidebar.markdown("### 統計の対象")
-include_excluded = st.sidebar.checkbox("除外・欠席者を含めて計算", value=False)
+include_all = st.sidebar.checkbox("チェック無しのメンバーも含めて計算", value=False)
 
-# 統計に使用するデータの切り替え
-stats_target = filtered_data if include_excluded else edited_df
-target_label = "（欠席者込み）" if include_excluded else "（出席者のみ）"
+stats_target = edited_df if include_all else active_df
+target_label = "（全員）" if include_all else "（対象のみ）"
 
 if not stats_target.empty:
     current_mean = stats_target["練習回数"].mean()
@@ -99,64 +96,50 @@ if not stats_target.empty:
 else:
     current_mean, current_sd, ideal_sigma = 0.0, 0.0, 2.0
 
-# 1. 統計情報の表示
 st.sidebar.markdown(f"### データ統計 {target_label}")
-st.sidebar.info(f"""
-- **平均**: {current_mean:.1f} 回
-- **標準偏差**: {current_sd:.1f}
-""")
+st.sidebar.info(f"- **平均**: {current_mean:.1f} 回\n- **標準偏差**: {current_sd:.1f}")
 st.sidebar.caption("※標準偏差が大きい＝格差が激しい")
-
 st.sidebar.markdown("---")
 
-# 2. ボタンとスライダーの設定
 st.sidebar.markdown("### 運要素(σ)の調整")
 st.sidebar.caption(f"理想値 (SD×0.5): **{ideal_sigma:.1f}**")
 
-# ボタンを押したら理想値をセット
 if st.sidebar.button("理想のσの値を設定する"):
     st.session_state.sigma_value = float(ideal_sigma)
-    st.rerun() # 画面を更新してスライダーに反映
+    st.rerun()
 
-# スライダー
 luck_sigma = st.sidebar.slider(
     "運の強さ (σ)",
     min_value=0.0,
     max_value=10.0,
     step=0.1,
-    key="sigma_value", 
-    help="値を大きくすると、下剋上が起きやすくなる"
+    key="sigma_value"
 )
 
-# 逆転可能ラインの計算（σの2倍）
 reversal_range = luck_sigma * 2.0
-
-st.sidebar.warning(f"""**現在の設定：**練習回数の差が**{reversal_range: .1f}回**以内なら運で逆転可能""")
+st.sidebar.warning(f"**現在の設定：** 差が **{reversal_range:.1f}回** 以内なら逆転可能")
 
 # --- 6. 抽選実行 (Run lottery) ---
 if st.button("抽選実行", type="primary"):
-    if edited_df.empty:
-        st.error("抽選対象のデータがないです")
+    if active_df.empty:
+        st.error("抽選対象が選択されていません")
     else:
         results = []
-        for _, row in edited_df.iterrows():
+        for _, row in active_df.iterrows():
             luck = random.gauss(0, luck_sigma)
             results.append({
                 "名前": row["名前"],
-                "性別": row["性別"],
                 "練習回数": row["練習回数"],
                 "運 (Luck)": luck,
-                "最終スコア (Score)": row["練習回数"] + luck
+                "最終スコア": row["練習回数"] + luck
             })
         
-        # スコア順に並び替え
-        result_df = pd.DataFrame(results).sort_values(by="最終スコア (Score)", ascending=False).reset_index(drop=True)
+        result_df = pd.DataFrame(results).sort_values(by="最終スコア", ascending=False).reset_index(drop=True)
         result_df.index = result_df.index + 1
-        result_df.index.name = "順位 (Rank)"
+        result_df.index.name = "順位"
         
-        st.success(f"{selection_type}の抽選結果")
-        display_df = result_df.copy()
-        display_df["運 (Luck)"] = display_df["運 (Luck)"].map('{:+.1f}'.format)
-        display_df["最終スコア (Score)"] = display_df["最終スコア (Score)"].map('{:.1f}'.format)
-        st.table(display_df)
-
+        st.success(f"{selection_type}（対象：{len(active_df)}名）の抽選結果")
+        display_res = result_df.copy()
+        display_res["運 (Luck)"] = display_res["運 (Luck)"].map('{:+.1f}'.format)
+        display_res["最終スコア"] = display_res["最終スコア"].map('{:.1f}'.format)
+        st.table(display_res)
