@@ -9,8 +9,8 @@ SHEET_URL = "https://docs.google.com/spreadsheets/d/1LLgMdsiORF8LBCtN_8BHGUdms_T
 if "sigma_value" not in st.session_state:
     st.session_state.sigma_value = 2.0
 
-st.set_page_config(page_title="慶應ボード決め", page_icon="🏄‍♂️")
-st.title("慶應ボードセレクション (Board selection)")
+st.set_page_config(page_title="ボード", page_icon="🏄‍♂️")
+st.title("慶應ボード決め")
 
 # --- 2. データ読み込み処理 (Data loading) ---
 @st.cache_data(ttl=30)
@@ -41,9 +41,8 @@ def load_spreadsheet_data():
 all_data = load_spreadsheet_data()
 
 # --- 3. 性別選択 (Gender selection) ---
-st.subheader("抽選カテゴリー (Category) の選択")
+st.subheader("性別選択")
 selection_type = st.radio(
-    "誰を抽選対象にする？",
     ["全員", "男子", "女子"],
     horizontal=True
 )
@@ -92,7 +91,7 @@ luck_sigma = st.sidebar.slider(
 # --- 6. 抽選実行 (Run lottery) ---
 if st.button("抽選実行", type="primary"):
     if edited_df.empty:
-        st.error("抽選対象のデータがないよ！")
+        st.error("抽選対象のデータがないです")
     else:
         results = []
         for _, row in edited_df.iterrows():
@@ -110,7 +109,7 @@ if st.button("抽選実行", type="primary"):
         result_df.index = result_df.index + 1
         result_df.index.name = "順位 (Rank)"
         
-        st.success(f"{selection_type}の抽選結果発表！")
+        st.success(f"{selection_type}の抽選結果")
         display_df = result_df.copy()
         display_df["運 (Luck)"] = display_df["運 (Luck)"].map('{:+.1f}'.format)
         display_df["最終スコア (Score)"] = display_df["最終スコア (Score)"].map('{:.1f}'.format)
