@@ -67,6 +67,19 @@ edited_df = st.data_editor(
     use_container_width=True
 )
 
+# 【追加】除外（欠席）されたメンバーをグレーエリアに表示
+excluded_members = filtered_data[~filtered_data["名前"].isin(edited_df["名前"])]
+if not excluded_members.empty:
+    st.markdown("---")
+    st.caption("⬇️ 除外・欠席中のメンバー（表から消した人はここから確認できます）")
+    # グレーっぽい背景にするための設定
+    st.dataframe(
+        excluded_members[["名前", "練習回数"]], 
+        hide_index=True, 
+        use_container_width=True
+    )
+    st.info("👆 間違えて消した場合は、上の表の空行に「名前」と「回数」を打ち直せば復活します。")
+
 # --- 5. 統計量の計算 (Stats calculation) ---
 if not edited_df.empty:
     current_mean = edited_df["練習回数"].mean()
