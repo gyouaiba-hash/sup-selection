@@ -76,17 +76,41 @@ if not edited_df.empty:
 else:
     current_mean, current_sd, ideal_sigma = 0.0, 0.0, 2.0
 
-st.sidebar.header("設定 (Settings)")
-st.sidebar.markdown(f"### 📊 {selection_type}の統計 (Stats)")
-st.sidebar.info(f"- **平均 (Average)**: {current_mean:.1f} 回\n- **標準偏差 (SD)**: {current_sd:.1f}")
+st.sidebar.header("設定")
 
-if st.sidebar.button("理想のσをセット"):
+# 1. 統計情報の表示
+st.sidebar.markdown("### データ統計")
+st.sidebar.info(f"""
+- **平均**: {current_mean:.1f} 回
+- **標準偏差**: {current_sd:.1f}
+""")
+st.sidebar.caption("※標準偏差が大きい＝格差が激しい")
+
+st.sidebar.markdown("---")
+
+# 2. ボタンとスライダーの設定
+st.sidebar.markdown("### 運要素(σ)の調整")
+st.sidebar.caption(f"理想値 (SD×0.5): **{ideal_sigma:.1f}**")
+
+# ボタンを押したら理想値をセット
+if st.sidebar.button("理想のσの値を設定する"):
     st.session_state.sigma_value = float(ideal_sigma)
-    st.rerun()
+    st.rerun() # 画面を更新してスライダーに反映
 
+# スライダー
 luck_sigma = st.sidebar.slider(
-    "運の強さ (σ)", min_value=0.0, max_value=10.0, step=0.1, key="sigma_value"
+    "運の強さ (σ)",
+    min_value=0.0,
+    max_value=10.0,
+    step=0.1,
+    key="sigma_value", 
+    help="値を大きくすると、下剋上が起きやすくなる"
 )
+
+# 逆転可能ラインの計算（σの2倍）
+reversal_range = luck_sigma * 2.0
+
+st.sidebar.warning(f"""**現在の設定：**練習回数の差が**{reversal_range: .1f}回**以内なら運で逆転可能""")
 
 # --- 6. 抽選実行 (Run lottery) ---
 if st.button("抽選実行", type="primary"):
