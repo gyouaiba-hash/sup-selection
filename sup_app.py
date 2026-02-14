@@ -4,7 +4,7 @@ import random
 
 # --- 1. スプレッドシートの設定 ---
 # 「1ヶ月間の回数」シートを表示した状態のURLをコピーし、末尾を /export?format=csv&gid=... に書き換えてね
-SHEET_URL = "https://docs.google.com/spreadsheets/d/1D8LvFnTY90S0QxuAHdSmipur4lcv-C9lIJ0UKdBYucs/export?format=csv&gid=2078465993"
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1LLgMdsiORF8LBCtN_8BHGUdms_TpbXuwki4DFn03Amo/export?format=csv&gid=sharing"
 
 # スライダーの値を記憶するための「箱」を作る
 if "sigma_value" not in st.session_state:
@@ -22,21 +22,26 @@ st.markdown("2. 正規分布による揺らぎ：練習回数に平均0の「ガ
 @st.cache_data(ttl=30) # 30秒キャッシュ（頻繁にシートを更新する場合に便利）
 def load_spreadsheet_data():
     if "google.com" not in SHEET_URL or "【" in SHEET_URL:
-        # URLがデフォルトのままならダミーデータを表示
+        # URLが未設定ならダミーを表示
         return pd.DataFrame([{"名前": "メンバーA", "練習回数": 10}, {"名前": "メンバーB", "練習回数": 8}])
     
     try:
-        # 1-3行目をスキップして4行目のヘッダーから読み込む
-        df = pd.read_csv(SHEET_URL, skiprows=3)
+        # 【修正ポイント】skiprows=3 を削除。1行目から読み込む設定に変更
+        df = pd.read_csv(SHEET_URL)
         
+        # 列名が正しく読み込めているかチェック
         if "名前" in df.columns and "練習回数" in df.columns:
-            # 名前が空の行を除去し、練習回数を数値に変換
+            # 名前が空の行（IMPORTRANGEの余白など）を除去
             df = df.dropna(subset=["名前"])
+            # 練習回数を数値に変換（エラーは0にする）
             df["練習回数"] = pd.to_numeric(df["練習回数"], errors='coerce').fillna(0).astype(int)
+            
             return df[["名前", "練習回数"]].reset_index(drop=True)
         else:
-            st.error("シート内に「名前」と「練習回数」の列が見つかりません。")
+            # デバッグ用に読み込んだ列名を表示
+            st.error(f"列が見つかりません。現在の列名: {list(df.columns)}")
             return pd.DataFrame()
+            
     except Exception as e:
         st.error(f"データの読み込みに失敗しました。URLを確認してください。")
         return pd.DataFrame()
