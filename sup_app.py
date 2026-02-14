@@ -43,7 +43,7 @@ all_data = load_spreadsheet_data()
 # --- 3. 性別選択 (Gender selection) ---
 st.subheader("性別選択")
 selection_type = st.radio(
-    ["全員", "男子", "女子"],
+    "",["全員", "男子", "女子"],
     horizontal=True
 )
 
